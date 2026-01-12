@@ -1,39 +1,14 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: qr-service
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: qr-service
-  template:
-    metadata:
-      labels:
-        app: qr-service
-    spec:
-      containers:
-        - name: qr-service
-          image: qr/qr-service:latest
-          ports:
-            - containerPort: 8080
-          env:
-            - name: SPRING_DATASOURCE_URL
-              value: jdbc:mysql://mysql:3306/db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-            - name: SPRING_DATASOURCE_USERNAME
-              value: root
-            - name: SPRING_DATASOURCE_PASSWORD
-              value: root
----
 apiVersion: v1
 kind: Service
 metadata:
   name: qr-service
+  namespace: qr-project
 spec:
-  type: LoadBalancer
+  type: NodePort
   selector:
     app: qr-service
   ports:
     - protocol: TCP
       port: 8080
       targetPort: 8080
+      nodePort: 30080

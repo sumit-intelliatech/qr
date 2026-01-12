@@ -1,7 +1,18 @@
 apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: qr-project
+type: Opaque
+stringData:
+  root-password: "root"
+  database: "db"
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: mysql-pvc
+  namespace: qr-project
 spec:
   accessModes:
     - ReadWriteOnce
@@ -13,6 +24,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mysql
+  namespace: qr-project
 spec:
   selector:
     matchLabels:
@@ -23,16 +35,46 @@ spec:
       labels:
         app: mysql
     spec:
+      # Disable automounting the service account token unless needed
+      automountServiceAccountToken: false
       containers:
         - name: mysql
           image: mysql:8
+          imagePullPolicy: IfNotPresent
           env:
             - name: MYSQL_ROOT_PASSWORD
-              value: root
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: root-password
             - name: MYSQL_DATABASE
-              value: db
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: database
           ports:
             - containerPort: 3306
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+              ephemeral-storage: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+              ephemeral-storage: "2Gi"
+          readinessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 1
+          livenessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 2
           volumeMounts:
             - mountPath: /var/lib/mysql
               name: mysql-storage
@@ -44,9 +86,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mysql
+  name: mysql-service
+  namespace: qr-project
 spec:
   ports:
     - port: 3306
+      targetPort: 3306
   selector:
     app: mysql

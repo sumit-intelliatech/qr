@@ -2,27 +2,41 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: qr-deployment
+  namespace: qr-project
   labels:
-    app: qr
+    app: qr-service
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: qr
+      app: qr-service
   template:
     metadata:
       labels:
-        app: qr
+        app: qr-service
     spec:
+      # Disable automounting the service account token unless needed
+      automountServiceAccountToken: false
       containers:
-      - name: qr-container
-        image: yourdockerhub/qr-service:latest
+      - name: qr-service
+        # Use a specific tag instead of :latest; replace with your CI-built image tag
+        image: sumitpawar28/qr_service:latest
+        imagePullPolicy: Always
         ports:
         - containerPort: 8080
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+            ephemeral-storage: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+            ephemeral-storage: "1Gi"
         env:
         - name: SPRING_DATASOURCE_URL
-          value: jdbc:mysql://mysql-service:3306/db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+          value: "jdbc:mysql://mysql-service:3306/db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
         - name: SPRING_DATASOURCE_USERNAME
-          value: root
+          value: "root"
         - name: SPRING_DATASOURCE_PASSWORD
-          value: root
+          value: "root"
